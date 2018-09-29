@@ -23,7 +23,7 @@ connection.connect((err) => {
 });
 
 function start() {
-    connection.query("SELECT item_id, product_name, price, stock_quantity FROM products", (err, res) => {
+    connection.query("SELECT item_id, product_name, price, stock_quantity FROM products WHERE stock_quantity > 0", (err, res) => {
         if (err) throw err;
 
         console.log("");
@@ -74,6 +74,7 @@ function start() {
             ].join(" "));
         });
 
+        console.log("");
         buyerPrompt();
     });
 }
@@ -83,12 +84,34 @@ function buyerPrompt() {
         {
             type: "input",
             name: "id",
-            message: "Enter the ID of the item you would like to purchase:"
+            message: "Enter the ID of the item you would like to purchase:",
+            validate: function (input) {
+                if (!parseInt(input)) {
+                    console.log('\nError! ID must be an integer.\n');
+                    return false;
+                } else if (parseInt(input) < 1) {
+                    console.log('\nError! ID number must be at least 1.\n');
+                    return false;
+                }
+
+                return true;
+            }
         },
         {
             type: "input",
             name: "quantity",
-            message: "How many would you like?"
+            message: "How many would you like?",
+            validate: function(input) {
+                if (!parseInt(input)) {
+                    console.log('\nError! Please enter a valid number.\n');
+                    return false;
+                } else if (parseInt(input) < 1) {
+                    console.log('\nError! Quantity must be at least 1.\n');
+                    return false;
+                }
+
+                return true;
+            }
         }
     ]).then(function(responses) {
         const id = parseInt(responses.id);
@@ -102,44 +125,73 @@ function buyerPrompt() {
             function(err, res) {
                 if (err) throw err;
 
-                if (quantity > res[0].stock_quantity) {
-                    console.log("Insufficient quantity!");
-
-                    console.clear();
-                    start();
+                if (res.length) {
+                    if (quantity > res[0].stock_quantity) {
+                        console.log("Insufficient quantity!");
+                        
+                        buyerPrompt();
+                    } else {
+                        purchaseItem(res[0], quantity);
+                    }
                 } else {
-                    purchaseItem(res[0], quantity);
+                    console.log(`Could not find item with ID= ${id}.`);
+                    buyerPrompt();
                 }
             }
         );
+
+        console.log("Verifying availability...");
     })
 }
 
 function purchaseItem(item, quantityPurchased) {
     // update database
-    updateRow(
-        item.item_id,
+
+    connection.query(
+        "UPDATE products SET ? WHERE ?",
         {
-            stock_quantity: item.stock_quantity - quantityPurchased
+            stock_quantity: item.stock_quantity - quantityPurchased,
+            id: item.item_id
         },
         function(err, res) {
             if (err) throw err;
 
             // display total
-            if (res.affectedRows > 0) console.log(`Order complete! Your total: $${item.price * quantity}`);
+            if (res.affectedRows > 0) {
+                console.log(`Order complete! Your total: $${item.price * quantity}`);
+            } else {
+                console.log("Error updating records. Could not complete order.");
+            }
         }
     );
+
+    // updateRow(
+    //     item.item_id,
+    //     {
+    //         stock_quantity: item.stock_quantity - quantityPurchased
+    //     },
+    //     function(err, res) {
+    //         if (err) throw err;
+
+    //         // display total
+    //         if (res.affectedRows > 0) {
+    //             console.log(`Order complete! Your total: $${item.price * quantity}`);
+    //         } else {
+    //             console.log("Error updating records. Could not complete order.");
+    //         }
+    //     }
+    // );
 
     buyerPrompt();
 }
 
-function updateRow(id, changeset, callback) {
-    connection.query(
-        "UPDATE products SET ? WHERE ?",
-        changeset,
-        {
-            id: id
-        },
-        callback
-    );
-}
+// function updateRow(id, changeset, callback) {
+//     connection.query(
+//         "UPDATE products SET ? WHERE ?",
+//         changeset,
+//         {
+//             id: id
+//         },
+//         callback
+//     );
+// }
