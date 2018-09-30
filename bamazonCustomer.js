@@ -148,50 +148,22 @@ function purchaseItem(item, quantityPurchased) {
     // update database
 
     connection.query(
-        "UPDATE products SET ? WHERE ?",
-        {
-            stock_quantity: item.stock_quantity - quantityPurchased,
-            id: item.item_id
-        },
-        function(err, res) {
-            if (err) throw err;
+        "UPDATE products SET stock_quantity=? WHERE item_id=?",
+        [
+            item.stock_quantity - quantityPurchased,
+            item.item_id
+        ],
+        function (err, res) {
+            if (err) console.log(err);
 
             // display total
             if (res.affectedRows > 0) {
-                console.log(`Order complete! Your total: $${item.price * quantity}`);
+                console.log("Order complete! Your total is $" + (item.price * quantityPurchased));
             } else {
-                console.log("Error updating records. Could not complete order.");
+                console.log("Error updating records. Could not complete your order.");
             }
+
+            buyerPrompt();
         }
     );
-
-    // updateRow(
-    //     item.item_id,
-    //     {
-    //         stock_quantity: item.stock_quantity - quantityPurchased
-    //     },
-    //     function(err, res) {
-    //         if (err) throw err;
-
-    //         // display total
-    //         if (res.affectedRows > 0) {
-    //             console.log(`Order complete! Your total: $${item.price * quantity}`);
-    //         } else {
-    //             console.log("Error updating records. Could not complete order.");
-    //         }
-    //     }
-    // );
-
-    buyerPrompt();
 }
-
-// function updateRow(id, changeset, callback) {
-//     connection.query(
-//         "UPDATE products SET ? WHERE ?",
-//         changeset,
-//         {
-//             id: id
-//         },
-//         callback
-//     );
-// }
