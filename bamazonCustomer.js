@@ -116,7 +116,7 @@ function purchaseItem(item, quantityPurchased) {
                 console.log("Error updating records. Could not complete your order.");
             }
 
-            buyerPrompt();
+            start();
         }
     );
 }
